@@ -1,0 +1,218 @@
+PROJECT CONFIGURATION MODULE - ARCHITECTURE DIAGRAM
+=====================================================
+
+┌─────────────────────────────────────────────────────────────────┐
+│                          CONFIGURATION LAYER                     │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        │                     │                     │
+        ▼                     ▼                     ▼
+    ┌────────┐          ┌──────────┐          ┌────────────┐
+    │  .env  │          │Properties│          │Environment│
+    │(Secrets)          │  Files   │          │ Variables │
+    └────────┘          └──────────┘          └────────────┘
+        │                     │                     │
+        └─────────────────────┼─────────────────────┘
+                              │
+                              ▼
+                    ┌──────────────────┐
+                    │  ConfigManager   │ (Singleton)
+                    │ (Loader + Cache) │
+                    └──────────────────┘
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        │                     │                     │
+        ▼                     ▼                     ▼
+    ┌─────────────┐   ┌──────────────┐   ┌──────────────────┐
+    │TestConfig   │   │Credentials   │   │BrowserSettings   │
+    │(Interface)  │   │(Immutable)   │   │(Immutable)       │
+    └─────────────┘   └──────────────┘   └──────────────────┘
+        │                     │                     │
+        │         ┌───────────┴───────────┐        │
+        │         │                       │        │
+        ▼         ▼                       ▼        ▼
+    ┌──────────────────────────────────────────────────────┐
+    │            BaseTest (All Tests Inherit)              │
+    │                                                       │
+    │  setUp() {                                           │
+    │    config = ConfigManager.getInstance()             │
+    │    WebDriver with config.getBrowserSettings()       │
+    │    Navigate to config.getBaseUrl()                  │
+    │    Timeouts from config.getTimeouts()              │
+    │  }                                                   │
+    └──────────────────────────────────────────────────────┘
+        │
+        └─── Available to all test classes
+
+
+DATA FLOW:
+==========
+
+1. Test Execution Start
+        │
+        ▼
+2. BaseTest.setUp() calls ConfigManager.getInstance()
+        │
+        ▼
+3. ConfigManager loads environment (DEV/STAGING/PROD)
+        │
+        ├─ Reads config-{env}.properties
+        ├─ Loads credentials from:
+        │  ├─ Environment variables (ADMIN_USERNAME, etc)
+        │  └─ .env file
+        └─ Creates immutable config objects
+        │
+        ▼
+4. Configuration objects created:
+        ├─ Credentials (admin + user)
+        ├─ Timeouts
+        ├─ BrowserSettings
+        └─ RetryConfig
+        │
+        ▼
+5. BaseTest uses config to:
+        ├─ Initialize WebDriver with browser settings
+        ├─ Apply timeouts to driver
+        └─ Navigate to base URL
+        │
+        ▼
+6. Test methods execute with full configuration available
+
+
+CONFIGURATION HIERARCHY:
+========================
+
+ConfigManager (Singleton)
+    │
+    ├─ Environment
+    │  ├─ DEV
+    │  ├─ STAGING
+    │  └─ PRODUCTION
+    │
+    ├─ Credentials
+    │  ├─ Admin Credentials
+    │  │  ├─ username
+    │  │  └─ password
+    │  │
+    │  └─ Standard User Credentials
+    │     ├─ username
+    │     └─ password
+    │
+    ├─ Timeouts
+    │  ├─ defaultTimeout (30s)
+    │  ├─ navigationTimeout (60s)
+    │  └─ assertionTimeout (10s)
+    │
+    ├─ BrowserSettings
+    │  ├─ headlessMode (false/true)
+    │  ├─ viewportWidth (1920)
+    │  ├─ viewportHeight (1080)
+    │  └─ browserType (chrome/firefox)
+    │
+    └─ RetryConfig
+       ├─ maxRetries (2)
+       ├─ screenshotOnFailure (true)
+       └─ videoRecordingOnFirstRetry (true)
+
+
+FEATURE COMPARISON BY ENVIRONMENT:
+=================================
+
+                   DEV        STAGING    PRODUCTION
+─────────────────────────────────────────────────
+Headless           ✗          ✓          ✓
+Base URL           Dev        Staging    Prod
+Retries            2          3          1
+Screenshot         ✓          ✓          ✓
+Video Recording    ✓          ✓          ✗
+Default Timeout    30s        30s        45s
+Navigation         60s        60s        90s
+Assertion          10s        10s        15s
+
+
+VALIDATION & ERROR HANDLING:
+=============================
+
+ConfigManager validates:
+  ✓ Properties file exists for selected environment
+  ✓ Required credentials are provided
+  ✓ Timeouts are positive values
+  ✓ Viewport dimensions are valid
+  ✓ Browser type is recognized
+
+Throws IOException if:
+  ✗ Configuration file not found
+  ✗ Invalid environment specified
+
+Throws IllegalStateException if:
+  ✗ Admin credentials missing
+  ✗ Standard user credentials missing
+  ✗ Invalid timeout values
+  ✗ Invalid viewport dimensions
+
+
+USAGE PATTERNS:
+===============
+
+Pattern 1: Direct Access in Test
+────────────────────────────────
+public class LoginTestValid extends BaseTest {
+    @Test
+    public void testValidLogin() {
+        Credentials admin = config.getAdminCredentials();
+        loginPage.performLogin(admin.getUsername(), admin.getPassword());
+    }
+}
+
+Pattern 2: Access via BaseTest Helper
+───────────────────────────────────────
+public class LoginTestValid extends BaseTest {
+    @Test
+    public void testValidLogin() {
+        TestConfig config = getConfig();
+        String url = config.getBaseUrl();
+    }
+}
+
+Pattern 3: Configuration-Driven Test Data
+──────────────────────────────────────────
+public class AdminTestValid extends BaseTest {
+    @Test
+    public void testAdminAccess() {
+        Credentials admin = config.getAdminCredentials();
+        loginPage.loginAs(admin);
+        Assert.assertTrue(admin_page.isDisplayed());
+    }
+}
+
+
+MAINTENANCE & EXTENSION:
+========================
+
+To add new configuration:
+
+1. Create property in config-*.properties:
+   my.new.property=value
+
+2. Add getter in ConfigManager:
+   public String getMyNewProperty() {
+       return getStringProperty("my.new.property", "defaultValue");
+   }
+
+3. Use in tests:
+   String value = config.getMyNewProperty();
+
+Example: Add custom timeout
+─────────────────────────────
+In config-*.properties:
+   timeout.custom.api=20
+
+In ConfigManager:
+   public long getApiTimeout() {
+       return getLongProperty("timeout.custom.api", 20);
+   }
+
+In tests:
+   WebDriverWait wait = new WebDriverWait(driver, 
+       Duration.ofSeconds(config.getApiTimeout()));

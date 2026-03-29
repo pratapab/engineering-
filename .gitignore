@@ -1,0 +1,8 @@
+.env
+.env.local
+.idea/
+target/
+*.class
+*.jar
+*.log
+.DS_Store

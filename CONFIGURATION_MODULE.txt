@@ -1,0 +1,170 @@
+CONFIGURATION MODULE SUMMARY
+=============================
+
+CREATED FILES:
+==============
+
+src/main/java/config/
+├── Environment.java          - Environment enum (DEV, STAGING, PRODUCTION)
+├── Credentials.java          - Credentials data holder with validation
+├── Timeouts.java             - Timeout configuration with defaults
+├── BrowserSettings.java      - Browser configuration (headless, viewport, type)
+├── RetryConfig.java          - Retry policy (max retries, screenshot, video)
+├── TestConfig.java           - Configuration interface
+└── ConfigManager.java        - Singleton manager (loads from properties + environment variables)
+
+src/main/resources/
+├── config-dev.properties     - Development environment (headless: false, retries: 2)
+├── config-staging.properties - Staging environment (headless: true, retries: 3)
+└── config-production.properties - Production (headless: true, retries: 1)
+
+Project Root:
+├── .env.example              - Template for credentials
+├── .gitignore                - Excludes .env files
+└── CONFIG_README.md          - Documentation
+
+Updated Files:
+└── src/main/java/base/BaseTest.java - Integrated ConfigManager
+
+FEATURES:
+=========
+
+1. MULTIPLE ENVIRONMENTS:
+   - Dev: Interactive (headless=false), 2 retries, video enabled
+   - Staging: Headless mode, 3 retries, video enabled
+   - Production: Headless mode, 1 retry, video disabled
+
+2. CONFIGURABLE SETTINGS:
+   - Base URL per environment
+   - API URL per environment
+   - Admin & Standard User credentials
+   - Timeouts: default (30s), navigation (60s), assertion (10s)
+   - Browser: Chrome/Firefox, headless mode, viewport (1920x1080)
+   - Retry: max 2, screenshot on failure, video on first retry
+
+3. SECURE CREDENTIAL HANDLING:
+   - Credentials loaded from environment variables or .env file
+   - Never hardcoded in properties files
+   - Validation on load with meaningful error messages
+
+4. IMMUTABLE CONFIG OBJECTS:
+   - Environment.java - Type-safe environment selection
+   - Credentials.java - Immutable, validated
+   - All config classes are immutable
+
+USAGE IN TESTS:
+===============
+
+1. Access Configuration:
+   TestConfig config = baseTestInstance.getConfig();
+   
+2. Get Base URL:
+   String url = config.getBaseUrl();
+   
+3. Get Credentials:
+   Credentials admin = config.getAdminCredentials();
+   Credentials user = config.getStandardUserCredentials();
+   
+4. Get Timeouts:
+   long timeout = config.getTimeouts().getDefaultTimeout();
+   
+5. Get Browser Settings:
+   BrowserSettings browser = config.getBrowserSettings();
+   boolean headless = browser.isHeadlessMode();
+
+RUNNING TESTS:
+==============
+
+# Default (dev environment):
+mvn test
+
+# Staging environment:
+mvn test -Denv=staging
+
+# Production environment:
+mvn test -Denv=production
+
+# With environment variable:
+export ENV=staging && mvn test
+
+SETUP INSTRUCTIONS:
+===================
+
+1. Copy .env.example to .env:
+   cp .env.example .env
+
+2. Edit .env with actual credentials:
+   ADMIN_USERNAME=your_admin_email@salesforce.com
+   ADMIN_PASSWORD=your_admin_password
+   USER_USERNAME=your_user_email@salesforce.com
+   USER_PASSWORD=your_user_password
+   ENV=dev
+
+3. Run tests:
+   mvn test
+
+ENVIRONMENT-SPECIFIC BEHAVIORS:
+===============================
+
+DEV (Default):
+- URL: https://login.salesforce.com/?locale=in
+- Headless: false (see browser)
+- Retries: 2
+- Screenshot: enabled
+- Video: enabled
+- Timeouts: 30s default, 60s navigation, 10s assertion
+
+STAGING:
+- URL: https://staging.salesforce.com/?locale=in
+- Headless: true
+- Retries: 3
+- Screenshot: enabled
+- Video: enabled
+- Timeouts: 30s default, 60s navigation, 10s assertion
+
+PRODUCTION:
+- URL: https://login.salesforce.com/?locale=in
+- Headless: true
+- Retries: 1
+- Screenshot: enabled
+- Video: disabled (risky in production)
+- Timeouts: 45s default, 90s navigation, 15s assertion
+
+ERROR HANDLING:
+===============
+
+ConfigManager throws IOException if:
+- Configuration file not found
+- Invalid environment specified
+- Required credentials missing
+
+All components validate inputs:
+- Timeouts must be > 0
+- Viewport dimensions must be > 0
+- Credentials cannot be empty
+- Max retries cannot be negative
+
+EXTENDING CONFIGURATION:
+=======================
+
+To add new settings:
+
+1. Add property to config-*.properties files
+2. Create getter/loader in ConfigManager
+3. Update documentation
+
+Example: Add log level
+   - Add to properties: log.level=DEBUG
+   - Add to ConfigManager: String getLogLevel() { return getStringProperty("log.level", "INFO"); }
+   - Access: config.getLogLevel()
+
+BEST PRACTICES:
+===============
+
+✓ Never commit .env file (in .gitignore)
+✓ Use .env.example as template for team
+✓ Keep sensitive data in environment variables
+✓ Use immutable configuration objects
+✓ Validate configuration on load (done in ConfigManager)
+✓ Different settings per environment
+✓ Centralized configuration access via singleton

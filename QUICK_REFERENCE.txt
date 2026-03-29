@@ -1,0 +1,295 @@
+QUICK REFERENCE GUIDE - CONFIGURATION MODULE
+═════════════════════════════════════════════
+
+📁 PROJECT STRUCTURE:
+─────────────────────
+SalesforceAutomation/
+├── src/main/java/config/           ← Configuration classes
+├── src/main/resources/              ← Property files per env
+├── src/test/java/tests/             ← Test classes
+├── .env.example                     ← Credentials template
+└── CONFIG*, ARCHITECTURE, DELIVERY* ← Documentation
+
+
+🚀 QUICK START:
+───────────────
+
+1. Create .env:
+   cp .env.example .env
+
+2. Edit .env:
+   ADMIN_USERNAME=your_admin@salesforce.com
+   ADMIN_PASSWORD=your_password
+   USER_USERNAME=your_user@salesforce.com
+   USER_PASSWORD=your_password
+
+3. Run tests:
+   mvn test
+
+
+📋 KEY CLASSES:
+────────────────
+
+ConfigManager
+  └─ Singleton, loads from properties + .env
+  └─ Methods: getInstance(), getInstance(Environment), reset()
+
+TestConfig (Interface)
+  ├─ getBaseUrl()
+  ├─ getApiUrl()
+  ├─ getAdminCredentials()
+  ├─ getStandardUserCredentials()
+  ├─ getTimeouts()
+  ├─ getBrowserSettings()
+  ├─ getRetryConfig()
+  └─ getEnvironment()
+
+Environment (Enum)
+  ├─ DEV
+  ├─ STAGING
+  └─ PRODUCTION
+
+Credentials (Immutable)
+  ├─ getUsername()
+  └─ getPassword()
+
+Timeouts (Immutable)
+  ├─ getDefaultTimeout()
+  ├─ getNavigationTimeout()
+  └─ getAssertionTimeout()
+
+BrowserSettings (Immutable)
+  ├─ isHeadlessMode()
+  ├─ getViewportWidth()
+  ├─ getViewportHeight()
+  └─ getBrowserType()
+
+RetryConfig (Immutable)
+  ├─ getMaxRetries()
+  ├─ isScreenshotOnFailure()
+  └─ isVideoRecordingOnFirstRetry()
+
+
+⚙️ ENVIRONMENT COMPARISON:
+───────────────────────────
+
+                   DEV        STAGING    PRODUCTION
+─────────────────────────────────────────────────
+Headless           ✗          ✓          ✓
+Retries            2          3          1
+Video              ✓          ✓          ✗
+Screenshot         ✓          ✓          ✓
+Default Timeout    30s        30s        45s
+Navigation         60s        60s        90s
+Assertion          10s        10s        15s
+
+
+🔧 USAGE EXAMPLES:
+──────────────────
+
+# Get credentials in tests:
+Credentials admin = config.getAdminCredentials();
+String username = admin.getUsername();
+String password = admin.getPassword();
+
+# Get browser settings:
+BrowserSettings browser = config.getBrowserSettings();
+boolean headless = browser.isHeadlessMode();
+
+# Get timeouts:
+Timeouts timeouts = config.getTimeouts();
+long timeout = timeouts.getDefaultTimeout();
+
+# Get retry config:
+RetryConfig retry = config.getRetryConfig();
+int maxRetries = retry.getMaxRetries();
+
+
+🎯 RUN COMMANDS:
+─────────────────
+
+# Compile only
+mvn clean compile
+
+# Run tests (dev environment)
+mvn test
+
+# Run specific environment
+mvn test -Denv=staging
+mvn test -Denv=production
+
+# With environment variables
+export ENV=staging && mvn test
+
+# Run specific test class
+mvn test -Dtest=LoginTestValid
+
+# Run with debugging
+mvn test -X
+
+
+📝 PROPERTY FILES:
+──────────────────
+
+config-dev.properties
+├─ base.url
+├─ api.url
+├─ timeout.* (default, navigation, assertion)
+├─ browser.* (type, headless, viewport)
+├─ retry.* (max, screenshot, video)
+└─ credentials placeholders
+
+config-staging.properties
+└─ Same structure as dev
+
+config-production.properties
+└─ Same structure with prod-specific values
+
+
+🔐 CREDENTIALS SETUP:
+─────────────────────
+
+Option 1: .env file
+─────────────────────
+Create .env in project root:
+  ADMIN_USERNAME=admin@salesforce.com
+  ADMIN_PASSWORD=your_admin_password
+  USER_USERNAME=user@salesforce.com
+  USER_PASSWORD=your_user_password
+  ENV=dev
+
+Option 2: Environment variables
+─────────────────────────────────
+export ADMIN_USERNAME=admin@salesforce.com
+export ADMIN_PASSWORD=your_password
+export USER_USERNAME=user@salesforce.com
+export USER_PASSWORD=your_password
+mvn test
+
+Option 3: Properties file (NOT recommended)
+──────────────────────────────────────────────
+Edit config-dev.properties:
+  admin.username=admin@salesforce.com
+  admin.password=password
+  user.username=user@salesforce.com
+  user.password=password
+
+
+✅ VALIDATION RULES:
+─────────────────────
+
+✓ Properties file must exist for environment
+✓ Credentials must not be null or empty
+✓ Timeouts must be > 0
+✓ Viewport dimensions must be > 0
+✓ Max retries must be >= 0
+✓ Browser type must be recognized (chrome/firefox)
+
+
+🐛 TROUBLESHOOTING:
+────────────────────
+
+"Configuration file not found"
+  → Check ENV variable or -Denv parameter
+  → Ensure config-{env}.properties exists
+
+"Credentials not configured"
+  → Create .env file with ADMIN_USERNAME etc
+  → Or set environment variables
+  → Or update properties file
+
+"Invalid timeout value"
+  → Timeouts must be positive integers > 0
+  → Check timeout.* properties
+
+"Driver initialization failed"
+  → Check browser settings configuration
+  → Ensure browser type is chrome or firefox
+
+
+📚 DOCUMENTATION:
+──────────────────
+
+CONFIG_README.md
+  ├─ Features overview
+  ├─ Usage guide
+  └─ Setup instructions
+
+CONFIGURATION_MODULE.txt
+  ├─ File structure
+  ├─ Features detailed
+  └─ Extension guide
+
+ARCHITECTURE.txt
+  ├─ Visual diagrams
+  ├─ Data flow
+  └─ Patterns
+
+DELIVERY_SUMMARY.txt
+  ├─ Complete overview
+  ├─ Implementation status
+  └─ What's next
+
+
+🌐 ENVIRONMENT VARIABLES:
+──────────────────────────
+
+Required:
+  ADMIN_USERNAME
+  ADMIN_PASSWORD
+  USER_USERNAME
+  USER_PASSWORD
+
+Optional:
+  ENV (default: dev)
+
+
+💡 BEST PRACTICES:
+──────────────────
+
+✓ Always use .env for local development
+✓ Never commit .env to git
+✓ Use environment variables in CI/CD
+✓ Override properties for specific environments
+✓ Validate configuration on test startup
+✓ Use immutable config objects
+✓ Access config through BaseTest
+
+
+🔄 ADDING NEW SETTINGS:
+────────────────────────
+
+1. Add to properties:
+   my.setting=value
+
+2. Add getter to ConfigManager:
+   public String getMySettings() {
+       return getStringProperty("my.setting", "default");
+   }
+
+3. Use in tests:
+   String value = config.getMySettings();
+
+
+⚡ PERFORMANCE TIP:
+────────────────────
+
+ConfigManager is Singleton:
+  - Config loaded once per test run
+  - Reused across all tests
+  - No repeated file I/O
+  - Thread-safe
+
+
+🎓 LEARN MORE:
+────────────────
+
+See full documentation in:
+├─ CONFIG_README.md (Usage)
+├─ ARCHITECTURE.txt (Design)
+└─ Source code comments
+
+
+═════════════════════════════════════════════════════════════════════════════
+Ready to Use! 🚀
+═════════════════════════════════════════════════════════════════════════════

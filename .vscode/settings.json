@@ -1,0 +1,74 @@
+{
+  "[java]": {
+    "editor.defaultFormatter": "redhat.java",
+    "editor.formatOnSave": true
+  },
+  "github.copilot.enable": {
+    "*": true,
+    "plaintext": false
+  },
+  "mcp": {
+    "enabled": true,
+    "servers": [
+      {
+        "name": "jenkins-mcp",
+        "command": "npx",
+        "args": [
+          "@modelcontextprotocol/server-jenkins"
+        ],
+        "env": {
+          "JENKINS_URL": "http://localhost:8080",
+          "JENKINS_USERNAME": "${env:JENKINS_USER}",
+          "JENKINS_TOKEN": "${env:JENKINS_TOKEN}"
+        }
+      }
+    ]
+  },
+  "jenkins": {
+    "url": "http://localhost:8080",
+    "credentials": {
+      "username": "${JENKINS_USER}",
+      "token": "${JENKINS_TOKEN}"
+    },
+    "pipelines": [
+      {
+        "name": "SalesforceAutomation-Dev",
+        "job": "SalesforceAutomation",
+        "parameters": {
+          "ENVIRONMENT": "dev",
+          "REPORT_TO_JIRA": true
+        }
+      },
+      {
+        "name": "SalesforceAutomation-Staging",
+        "job": "SalesforceAutomation",
+        "parameters": {
+          "ENVIRONMENT": "staging",
+          "REPORT_TO_JIRA": true
+        }
+      },
+      {
+        "name": "SalesforceAutomation-Prod",
+        "job": "SalesforceAutomation",
+        "parameters": {
+          "ENVIRONMENT": "production",
+          "REPORT_TO_JIRA": true
+        }
+      }
+    ]
+  },
+  "jira": {
+    "url": "https://your-jira-instance.atlassian.net",
+    "username": "${JIRA_USER}",
+    "apiToken": "${JIRA_TOKEN}",
+    "projectKey": "SFDC"
+  },
+  "copilot.chat": {
+    "prompts": {
+      "jenkins.trigger": "Trigger Jenkins pipeline {pipelineName} with environment {environment}",
+      "jenkins.status": "Get status of Jenkins job {jobName}",
+      "jira.createIssue": "Create a Jira issue for test failure: {testName}",
+      "jira.findIssues": "Find Jira issues with label 'test-failure' in project SFDC"
+    }
+  }
+}

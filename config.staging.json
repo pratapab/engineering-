@@ -1,0 +1,20 @@
+{
+  "baseUrl": "https://test.salesforce.com",
+  "credentials": {
+    "admin": {
+      "username": "admin@staging.salesforce.com",
+      "password": "your_staging_admin_password"
+    },
+    "user": {
+      "username": "user@staging.salesforce.com",
+      "password": "your_staging_user_password"
+    }
+  },
+  "timeouts": {
+    "actionTimeout": 15000,
+    "navigationTimeout": 45000,
+    "expectTimeout": 15000
+  },
+  "retries": 3,
+  "workers": 2
+}

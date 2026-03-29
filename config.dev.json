@@ -1,0 +1,20 @@
+{
+  "baseUrl": "https://login.salesforce.com",
+  "credentials": {
+    "admin": {
+      "username": "admin@salesforce.com",
+      "password": "your_admin_password"
+    },
+    "user": {
+      "username": "user@salesforce.com",
+      "password": "your_user_password"
+    }
+  },
+  "timeouts": {
+    "actionTimeout": 10000,
+    "navigationTimeout": 30000,
+    "expectTimeout": 10000
+  },
+  "retries": 2,
+  "workers": 4
+}
